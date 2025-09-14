@@ -658,7 +658,90 @@
     function applyPseudo(st,m){const ns={...st,board:st.board.map(r=>r.slice())};const[fr,fc]=pos(m.from);const[tr,tc]=pos(m.to);const piece=ns.board[fr][fc];ns.board[fr][fc]=null;if(m.enPassant){const capR=piece==='P'?tr+1:tr-1;ns.board[capR][tc]=null;} if(m.castle==='king'){ns.board[tr][tc]=piece;ns.board[tr][tc-1]=ns.board[tr][7];ns.board[tr][7]=null;} else if(m.castle==='queen'){ns.board[tr][tc]=piece;ns.board[tr][tc+1]=ns.board[tr][0];ns.board[tr][0]=null;} else {ns.board[tr][tc]= m.promotion ? (pColor(piece)==='white'? m.promotion : m.promotion.toLowerCase()) : piece;} let rights=ns.castling.replace(/-/,''); if(rights){if(m.from==='a1'||m.to==='a1') rights=rights.replace('Q',''); if(m.from==='h1'||m.to==='h1') rights=rights.replace('K',''); if(m.from==='a8'||m.to==='a8') rights=rights.replace('q',''); if(m.from==='h8'||m.to==='h8') rights=rights.replace('k','');} if(piece.toLowerCase()==='k'){rights=rights.replace(pColor(piece)==='white'?'K':'k',''); rights=rights.replace(pColor(piece)==='white'?'Q':'q','');} ns.castling=rights||'-'; ns.ep=m.epTarget || (m.enPassant? null:null); ns.active=other(st.active); ns.half=piece.toLowerCase()==='p'?0:st.half+1; if(ns.active==='white') ns.full=st.full+1; return ns;}
     function pieceClass(ch){const white=ch===ch.toUpperCase();const map={k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn'};return (white?'white ':'black ')+map[ch.toLowerCase()];}
     function clearAnnotations(){ if(arrows.length||highlights.size){arrows.length=0;highlights.clear();arrowRemoveStart=null;redrawAnnotations();updateHighlightDom();}}
-    function render(){const el=document.getElementById('chessboard'); el.innerHTML=''; const st=parseFen(state.fen); const highlightLast=(typeof getSetting === 'function' ? getSetting('highlightLastMove') : true); for(let r=0;r<8;r++) for(let c=0;c<8;c++){const square=document.createElement('div'); square.className='square '+(((r+c)%2===0)?'light':'dark'); const name=sq(r,c); square.dataset.square=name; if(highlights.has(name)) square.classList.add('highlight'); if(highlightLast&&(state.lastFrom===name||state.lastTo===name)) square.classList.add('last-move'); const piece=st.board[r][c]; if(piece){const pc=document.createElement('div'); pc.className='piece '+pieceClass(piece); pc.draggable=true; pc.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',name); state.dragFrom=name;}); pc.addEventListener('dragend',()=>{state.dragFrom=null;}); square.appendChild(pc);} square.addEventListener('click',()=>{ if(arrows.length||highlights.size){ clearAnnotations(); } arrowRemoveStart=null; renderArrowRemoveMarker(); onSquare(name); }); square.addEventListener('dragover',e=>e.preventDefault()); square.addEventListener('drop',e=>{e.preventDefault(); if(state.dragFrom) tryMove(state.dragFrom,name);}); square.addEventListener('mousedown',e=>onMouseDownSquare(e,name)); square.addEventListener('mouseup',e=>onMouseUpSquare(e,name)); el.appendChild(square);} 
+    function render(){
+        const el = document.getElementById('chessboard');
+        el.innerHTML = '';
+        const st = parseFen(state.fen);
+        const highlightLast = (typeof getSetting === 'function' ? getSetting('highlightLastMove') : true);
+        for (let r = 0; r < 8; r++){
+            for (let c = 0; c < 8; c++){
+                const square = document.createElement('div');
+                square.className = 'square ' + (((r + c) % 2 === 0) ? 'light' : 'dark');
+                const name = sq(r, c);
+                square.dataset.square = name;
+                if (highlights.has(name)) square.classList.add('highlight');
+                if (highlightLast && (state.lastFrom === name || state.lastTo === name)) square.classList.add('last-move');
+                const piece = st.board[r][c];
+                if (piece){
+                    const pc = document.createElement('div');
+                    pc.className = 'piece ' + pieceClass(piece);
+                    // store canonical piece code so palette / FEN helpers can read it
+                    pc.dataset.piece = piece;
+                    // In setup mode allow dragging both white and black pieces freely
+                    if (inSetup){
+                        pc.draggable = true;
+                        pc.addEventListener('dragstart', e => { state._didDrop = false; e.dataTransfer.setData('text/plain', name); state.dragFrom = name; });
+                        pc.addEventListener('dragend', () => {
+                            // If a drag ended without a successful drop inside the board, remove the piece (delete off-board)
+                            try{
+                                        if(inSetup && state.dragFrom && !state._didDrop){
+                                            const from = state.dragFrom;
+                                            const sttmp = parseFen(state.fen);
+                                            const [fr,fc] = pos(from);
+                                            const b = sttmp.board.map(r=>r.slice());
+                                            b[fr][fc] = null;
+                                            state.fen = composeFen({ board: b, active: sttmp.active, castling: sttmp.castling, ep: sttmp.ep, half: sttmp.half, full: sttmp.full });
+                                            render();
+                                        }
+                            }catch(e){}
+                            state.dragFrom = null; state._didDrop = false;
+                        });
+                    } else {
+                        pc.draggable = false;
+                    }
+                    square.appendChild(pc);
+                }
+
+                square.addEventListener('click', (e)=>{
+                    // Only handle left-clicks here. Right-clicks are handled by
+                    // the mousedown/mouseup arrow/annotation handlers and should
+                    // not trigger placement/deletion logic (prevents palette 'DEL' from deleting on right-click).
+                    if(e.button !== 0) return;
+                    // Allow clicks in setup to reach onSquare (which handles palette/held/existing logic)
+                    // Always treat a left-click as a chance to clear annotations if present
+                    if (arrows.length || highlights.size){ clearAnnotations(); }
+                    arrowRemoveStart = null; renderArrowRemoveMarker(); onSquare(name, e);
+                });
+
+                square.addEventListener('dragover', e => e.preventDefault());
+                square.addEventListener('drop', e => {
+                    e.preventDefault();
+                    if (inSetup){
+                        const from = state.dragFrom || e.dataTransfer.getData('text/plain');
+                        if (!from) return;
+                        const fromR = 8 - parseInt(from[1]), fromC = from.charCodeAt(0) - 97;
+                        const toR = r, toC = c;
+                        const board = parseFen(state.fen).board.map(row => row.slice());
+                        // Solo se il pezzo di partenza è bianco
+                        if (board[fromR] && board[fromR][fromC]){
+                            // Overwrite target square (allow both-color moves in setup)
+                            board[toR][toC] = board[fromR][fromC];
+                            board[fromR][fromC] = null;
+                            state._didDrop = true;
+                            const meta = parseFen(state.fen);
+                            state.fen = composeFen({ board, active: meta.active, castling: meta.castling, ep: meta.ep, half: meta.half, full: meta.full });
+                            render();
+                        }
+                    } else {
+                        if (state.dragFrom) tryMove(state.dragFrom, name);
+                    }
+                });
+
+                square.addEventListener('mousedown', e => onMouseDownSquare(e, name));
+                square.addEventListener('mouseup', e => onMouseUpSquare(e, name));
+                el.appendChild(square);
+            }
+        }
     if(state.selected){
         // Use nullish coalescing so an explicit `false` from settings works, undefined falls back to true
         const showMoves = (typeof getSetting === 'function' ? (getSetting('showLegalMoves') ?? true) : true);
@@ -766,12 +849,24 @@
     let _audioCtx=null, _masterGain=null, _audioInited=false;
     function initAudio(){ if(_audioInited) return; try{ _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); _masterGain = _audioCtx.createGain(); const vol = (safeGetSetting('masterVolume',70)||70)/100; _masterGain.gain.value = Math.min(1, Math.max(0, vol)); _masterGain.connect(_audioCtx.destination); _audioInited=true; }catch(e){ _audioInited=false; }}
     function playTone(freq, duration=0.06, type='sine', gain=0.08){ if(!_audioInited) initAudio(); if(!_audioInited) return; try{ const o=_audioCtx.createOscillator(); const g=_audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value = gain * ((safeGetSetting('masterVolume',70)||70)/100); o.connect(g); g.connect(_masterGain); o.start(); o.stop(_audioCtx.currentTime + duration); setTimeout(()=>{ try{ o.disconnect(); g.disconnect(); }catch(e){} }, (duration+0.05)*1000); }catch(e){} }
-    function playMoveSound(kind){ try{ if(!safeGetSetting('soundsEnabled', true)) return; if(kind==='capture'){ if(!safeGetSetting('captureSounds', true)) return; playTone(220,0.14,'sawtooth',0.18); playTone(440,0.06,'sine',0.08); } else { if(!safeGetSetting('moveSounds', true)) return; playTone(420,0.06,'square',0.10); playTone(840,0.03,'sine',0.06); } }catch(e){}
+    function playMoveSound(kind){
+        try{
+            if(!safeGetSetting('soundsEnabled', true)) return;
+            if(kind==='capture'){
+                if(!safeGetSetting('captureSounds', true)) return;
+                playTone(220,0.14,'sawtooth',0.18);
+                playTone(440,0.06,'sine',0.08);
+            } else {
+                if(!safeGetSetting('moveSounds', true)) return;
+                playTone(420,0.06,'square',0.10);
+                playTone(840,0.03,'sine',0.06);
+            }
+        }catch(e){}
     }
 
     // --- Analysis page additions: setup, palette, FEN controls ---
     let inSetup = false;
-    let selfPlay = false;git remote add origin https://github.com/waldren568/chessverse.git
+    let selfPlay = false;
     const pieceOrder = ['K','Q','R','B','N','P','k','q','r','b','n','p'];
     let palette=null, boardEl=null, currentFen='';
     // Note: do not attempt to preserve/call an earlier `onSquare` declaration here.
@@ -816,13 +911,22 @@
 
     function updateFenFromBoard(){
         const b=[];
-        for(let r=0;r<8;r++){ const row=[]; for(let c=0;c<8;c++){ const idx=r*8+c; const s=boardEl.children[idx]; const p=s.querySelector('.piece'); row.push(p? p.dataset.piece : null);} b.push(row);} currentFen = boardToFen(b); const fa=document.getElementById('fenArea'); if(fa) fa.value=currentFen; }
+        for(let r=0;r<8;r++){ const row=[]; for(let c=0;c<8;c++){ const idx=r*8+c; const s=boardEl.children[idx]; const p=s.querySelector('.piece'); row.push(p? p.dataset.piece : null);} b.push(row);} currentFen = boardToFen(b);
+        try{
+            const meta = parseFen(state.fen);
+            state.fen = composeFen({ board: b, active: meta.active, castling: meta.castling, ep: meta.ep, half: meta.half, full: meta.full });
+        }catch(e){ state.fen = currentFen + ' w - - 0 1'; }
+        const fa=document.getElementById('fenArea'); if(fa) fa.value=currentFen;
+    }
+
 
     // Click handler used by the render squares
     let heldPiece=null;
-    function onSquare(name){
+    function onSquare(name, ev){
+        // Only respond to left-clicks for placement/pickup logic
+        if(ev && ev.button !== 0) return;
         // If not in setup, fallback to existing behavior
-    console.log('[analysis_board] onSquare click', name, 'inSetup=', inSetup, 'selfPlay=', selfPlay);
+    console.log('[analysis_board] onSquare click', name, 'inSetup=', inSetup, 'selfPlay=', selfPlay, 'ev=', !!ev);
         if(!inSetup){
             // Use the page-local selection / try-move behavior directly. We purposely
             // avoid calling any preserved global `onSquare` because hoisting and
@@ -849,26 +953,56 @@
         // setup mode: find square element
         const sqEl = document.querySelector(`[data-square="${name}"]`);
         if(!sqEl) return;
-        const sel = palette.querySelector('.pal-item.selected');
+        // Ensure palette is found even if variable wasn't set yet
+        const pal = palette || document.getElementById('palette');
+        const sel = pal ? pal.querySelector('.pal-item.selected') : null;
         const existing = sqEl.querySelector('.piece');
 
-        if(heldPiece){ sqEl.innerHTML=''; if(heldPiece!=='') sqEl.appendChild(mkPieceDiv(heldPiece)); heldPiece=null; const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML=''; updateFenFromBoard(); return; }
+        // Always clear annotations on left-click
+        if(arrows.length || highlights.size){ clearAnnotations(); }
 
-        if(sel){ const code = sel.dataset.code; sqEl.innerHTML=''; if(code!=='') sqEl.appendChild(mkPieceDiv(code)); updateFenFromBoard(); return; }
+        // If we're holding a piece (picked up earlier), place it here
+        if(heldPiece){
+            sqEl.innerHTML='';
+            if(heldPiece!=='') sqEl.appendChild(mkPieceDiv(heldPiece));
+            heldPiece=null;
+            const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML='';
+            updateFenFromBoard();
+            return;
+        }
 
-        if(existing){ heldPiece = existing.dataset.piece || null; sqEl.innerHTML=''; const hb=document.getElementById('heldPieceBox'); if(hb){ hb.innerHTML=''; if(heldPiece) hb.appendChild(mkPieceDiv(heldPiece)); } updateFenFromBoard(); return; }
+        // If a palette item is selected, place that piece (overwrite if present)
+        if(sel){
+            const code = sel.dataset.code;
+            sqEl.innerHTML='';
+            if(code!=='') sqEl.appendChild(mkPieceDiv(code));
+            updateFenFromBoard();
+            return;
+        }
+
+        // If clicking an existing piece, pick it up
+        if(existing){
+            heldPiece = existing.dataset.piece || null;
+            sqEl.innerHTML='';
+            const hb=document.getElementById('heldPieceBox');
+            if(hb){ hb.innerHTML=''; if(heldPiece) hb.appendChild(mkPieceDiv(heldPiece)); }
+            updateFenFromBoard();
+            return;
+        }
     }
 
     // expose to global so existing square click logic uses this function
     window.onSquare = onSquare;
 
-    // Override render to use our onSquare for clicks; wrap previous render
+    // Override render so every call refreshes references (boardEl, palette)
     const _origRender = render;
-    function renderWrapper(){ _origRender(); boardEl = document.getElementById('chessboard'); palette = document.getElementById('palette'); buildPalette(); }
+    // Replace the global `render` function with a wrapper that calls the
+    // original implementation and then ensures our helper refs are set.
+    render = function(){ _origRender(); boardEl = document.getElementById('chessboard'); palette = document.getElementById('palette'); buildPalette(); };
 
     // Replace initial DOMContentLoaded behavior
-    document.addEventListener('DOMContentLoaded',()=>{ initAudio(); renderWrapper(); });
-    window.addEventListener('storage',()=>{ renderWrapper(); });
+    document.addEventListener('DOMContentLoaded',()=>{ initAudio(); render(); });
+    window.addEventListener('storage',()=>{ render(); });
 
     // Setup and Self-play toggles (mutually exclusive)
     document.addEventListener('DOMContentLoaded', ()=>{
@@ -884,17 +1018,20 @@
         if(setupBtn) setupBtn.addEventListener('click', ()=>{
             if(selfPlay){ selfPlay=false; selfBtn.textContent='Self-play: Off'; }
             inSetup = !inSetup; setupBtn.textContent = inSetup? 'Setup: On' : 'Setup'; clearBtn.style.display = inSetup? 'inline-block':'none'; if(!inSetup){ heldPiece=null; const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML=''; }
+            // Re-render immediately so piece elements gain/lose draggable attribute
+            try{ render(); }catch(e){}
         });
 
         if(selfBtn) selfBtn.addEventListener('click', ()=>{
             if(inSetup){ inSetup=false; setupBtn.textContent='Setup'; clearBtn.style.display='none'; heldPiece=null; const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML=''; }
             selfPlay = !selfPlay; selfBtn.textContent = 'Self-play: '+(selfPlay? 'On' : 'Off');
+            try{ render(); }catch(e){}
         });
 
         if(resetBtn) resetBtn.addEventListener('click', ()=>{ resetGame(); updateFenFromBoard(); });
         if(analyzeBtn) analyzeBtn.addEventListener('click', ()=>{ const fa=document.getElementById('fenArea'); const f = fa? fa.value.trim() : ''; analyzeFen(f||currentFen); });
 
-        if(loadFenBtn) loadFenBtn.addEventListener('click', ()=>{ const fa=document.getElementById('fenArea'); if(!fa) return; try{ const parsed=parseFen(fa.value.trim()); state.fen = fa.value.trim(); renderWrapper(); }catch(e){ alert('FEN non valido'); }});
+    if(loadFenBtn) loadFenBtn.addEventListener('click', ()=>{ const fa=document.getElementById('fenArea'); if(!fa) return; try{ const parsed=parseFen(fa.value.trim()); state.fen = fa.value.trim(); render(); }catch(e){ alert('FEN non valido'); }});
         if(exportFenBtn) exportFenBtn.addEventListener('click', ()=>{ const fa=document.getElementById('fenArea'); if(fa) fa.value = currentFen; });
         if(copyFenBtn) copyFenBtn.addEventListener('click', async ()=>{ const fa=document.getElementById('fenArea'); if(!fa) return; try{ await navigator.clipboard.writeText(fa.value); alert('FEN copiata'); }catch(e){ alert('Impossibile copiare'); } });
         // Ensure palette exists and is populated; fallback observer if not present yet

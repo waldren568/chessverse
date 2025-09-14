@@ -1,0 +1,249 @@
+<!-- Modal Impostazioni -->
+<div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-modal">
+        <div class="settings-header">
+            <h2 class="settings-title">Impostazioni</h2>
+            <button class="close-btn" onclick="closeSettings()">&times;</button>
+        </div>
+        <div class="settings-content">
+            <div class="settings-sidebar">
+                <button class="settings-tab active" data-tab="play">Play</button>
+                <button class="settings-tab" data-tab="gameplay">Gameplay</button>
+                <button class="settings-tab" data-tab="display">Display</button>
+                <button class="settings-tab" data-tab="sounds">Audio</button>
+            </div>
+            
+            <!-- Panel Play -->
+            <div class="settings-panel active" id="play-panel">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Annotazioni</h3>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Colore Frecce</div>
+                            <div class="setting-description">Scegli il colore delle frecce di annotazione</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="color-picker">
+                                <input type="color" id="arrowColor" value="#ff6b35">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Spessore Frecce</div>
+                            <div class="setting-description">Regola lo spessore delle frecce</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="slider" id="arrowThickness" min="6" max="20" value="12">
+                            <span class="slider-value" id="arrowThicknessValue">12px</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Trasparenza Frecce</div>
+                            <div class="setting-description">Regola l'opacità delle frecce</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="slider" id="arrowOpacity" min="30" max="100" value="80">
+                            <span class="slider-value" id="arrowOpacityValue">80%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Controlli</h3>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Click Destro per Frecce</div>
+                            <div class="setting-description">Abilita creazione frecce con click destro</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle active" id="rightClickArrows"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Auto-Clear Frecce</div>
+                            <div class="setting-description">Cancella automaticamente le frecce dopo una mossa</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle" id="autoClearArrows"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Gameplay -->
+            <div class="settings-panel" id="gameplay-panel">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Assistenza Mosse</h3>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Evidenzia Mosse Legali</div>
+                            <div class="setting-description">Mostra le caselle dove puoi muovere</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle active" id="showLegalMoves"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Conferma Mosse</div>
+                            <div class="setting-description">Richiedi conferma prima di effettuare la mossa</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle" id="confirmMoves"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Animazione Mosse</div>
+                            <div class="setting-description">Velocità dell'animazione delle mosse</div>
+                        </div>
+                        <div class="setting-control">
+                            <select class="select-dropdown" id="moveAnimation">
+                                <option value="none">Nessuna</option>
+                                <option value="fast">Veloce</option>
+                                <option value="normal" selected>Normale</option>
+                                <option value="slow">Lenta</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Tempo</h3>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Tempo Preferito</div>
+                            <div class="setting-description">Tempo di default per le nuove partite</div>
+                        </div>
+                        <div class="setting-control">
+                            <select class="select-dropdown" id="defaultTime">
+                                <option value="1+0">1 min</option>
+                                <option value="3+0">3 min</option>
+                                <option value="5+0">5 min</option>
+                                <option value="10+0" selected>10 min</option>
+                                <option value="15+10">15+10</option>
+                                <option value="30+0">30 min</option>
+                                <option value="90+0">90 min</option>
+                                <option value="90+30">90+30</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Display -->
+            <div class="settings-panel" id="display-panel">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Scacchiera</h3>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Dimensione Scacchiera</div>
+                            <div class="setting-description">Regola la dimensione della scacchiera</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="slider" id="boardSize" min="60" max="150" value="100">
+                            <span class="slider-value" id="boardSizeValue">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Tema Scacchiera</div>
+                            <div class="setting-description">Scegli l'aspetto della scacchiera</div>
+                        </div>
+                        <div class="setting-control">
+                            <select class="select-dropdown" id="boardTheme">
+                                <option value="brown" selected>Marrone</option>
+                                <option value="green">Verde</option>
+                                <option value="blue">Blu</option>
+                                <option value="purple">Viola</option>
+                                <option value="gray">Grigio</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Coordinate</div>
+                            <div class="setting-description">Mostra coordinate della scacchiera</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle active" id="showCoordinates"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Ultima Mossa</div>
+                            <div class="setting-description">Evidenzia l'ultima mossa effettuata</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle active" id="highlightLastMove"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Audio -->
+            <div class="settings-panel" id="sounds-panel">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Suoni</h3>
+                    
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Suoni Abilitati</div>
+                            <div class="setting-description">Abilita tutti i suoni del gioco</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle active" id="soundsEnabled"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Volume Generale</div>
+                            <div class="setting-description">Regola il volume dei suoni</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="slider" id="masterVolume" min="0" max="100" value="70">
+                            <span class="slider-value" id="masterVolumeValue">70%</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Suono Mosse</div>
+                            <div class="setting-description">Riproduci suono per le mosse</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle active" id="moveSounds"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <div class="setting-title">Suono Cattura</div>
+                            <div class="setting-description">Riproduci suono per le catture</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle active" id="captureSounds"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

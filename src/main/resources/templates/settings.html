@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>ChessVerse - Impostazioni</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{margin:0;font-family:'Noto Sans',system-ui,sans-serif;background:#312e2b;color:#fff;overflow-x:hidden}
+        /* HEADER */
+        .header{background:#262522;border-bottom:1px solid #3d3d3d;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:50}
+        .header-left{display:flex;align-items:center;gap:32px}
+        .logo{font-size:24px;font-weight:700;color:#8b4d8b;text-decoration:none}
+        .nav-links{display:flex;gap:24px}
+        .nav-links a{color:#b9b9b9;text-decoration:none;font-weight:500;font-size:14px;padding:8px 12px;border-radius:4px;transition:.2s}
+        .nav-links a:hover,.nav-links a.active{color:#fff;background:#3d3d3d}
+        .header-right{display:flex;align-items:center;gap:8px}
+        .btn{padding:8px 14px;border:none;border-radius:6px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit;font-size:14px}
+        .btn-primary{background:#8b4d8b;color:#fff}.btn-primary:hover{background:#7a427a}
+        .btn-ghost{background:#3d3d3d;color:#fff}.btn-ghost:hover{background:#4a4a4a}
+        /* LAYOUT */
+        main{max-width:1200px;margin:0 auto;padding:24px 16px;display:flex;gap:32px;flex-wrap:wrap}
+        .settings-area{flex:1;display:flex;flex-direction:column;align-items:center;gap:16px}
+        /* SETTINGS MODAL (adattato per pagina) */
+        .settings-modal{background:#262421;padding:24px;border-radius:12px;max-width:900px;width:100%;color:#fff;border:1px solid #3d3d3d}
+        .settings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+        .settings-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:nowrap;align-items:center}
+        .settings-tab{padding:8px 14px;background:#3d3d3d;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;transition:.15s;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .settings-tab.active,.settings-tab:hover{background:#8b4d8b;color:#fff}
+        .settings-panel{display:none;gap:16px;flex-wrap:wrap}
+        .settings-panel.active{display:flex}
+        .setting-item{flex:1 1 240px;background:#1f1f1f;border:1px solid #3d3d3d;padding:12px 14px;border-radius:10px;display:flex;flex-direction:column;gap:8px;min-width:220px}
+        .setting-item h4{font-size:14px;margin:0;font-weight:600;color:#fff}
+        .setting-item small{font-size:11px;color:#b9b9b9}
+        .setting-item input[type=range]{width:100%}
+        .toggle{width:44px;height:24px;border-radius:20px;background:#555;position:relative;cursor:pointer;transition:.2s}
+        .toggle::after{content:"";position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.2s}
+        .toggle.active{background:#8b4d8b}
+        .toggle.active::after{transform:translateX(20px)}
+        select, input[type=color]{background:#2c2c2c;color:#fff;border:1px solid #555;padding:6px 8px;border-radius:6px;font-family:inherit}
+        .close-btn{background:#3d3d3d;border:none;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer}
+        .close-btn:hover{background:#555}
+        /* Settings gear button unified */
+        .settings-btn{background:#3d3d3d;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center}
+        .settings-btn:hover{background:#4a4a4a}
+        @media (max-width:700px){main{padding:16px}.settings-area{flex:1 1 100%}}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <a class="logo" href="/">ChessVerse</a>
+            <nav class="nav-links">
+                <a href="/play">Gioca Online</a>
+                <a href="/bot">Bot Arena</a>
+                <a href="/analysis">Analizza</a>
+            </nav>
+        </div>
+        <div class="header-right" style="display:flex;align-items:center;gap:8px;">
+            <a href="/play" class="btn btn-ghost">Torna al Gioco</a>
+            <a href="/login" class="btn btn-primary">Accedi</a>
+        </div>
+    </div>
+    <main>
+        <section class="settings-area">
+            <div class="settings-modal">
+                <div class="settings-header">
+                    <h2 style="font-size:18px;font-weight:700;color:#fff;margin:0">Impostazioni</h2>
+                </div>
+                <div class="settings-tabs">
+                    <div class="settings-tab active" data-tab="general">Play</div>
+                    <div class="settings-tab" data-tab="display">Display</div>
+                    <div class="settings-tab" data-tab="audio">Suoni</div>
+                </div>
+                <!-- PANELS -->
+                <div id="general-panel" class="settings-panel active">
+                    <div class="setting-item">
+                        <h4>Mosse Legali</h4><small>Mostra suggerimenti</small>
+                        <div id="showLegalMoves" class="toggle active"></div>
+                    </div>
+                    <div class="setting-item">
+                        <h4>Ultima Mossa</h4><small>Evidenzia</small>
+                        <div id="highlightLastMove" class="toggle active"></div>
+                    </div>
+                    <div class="setting-item">
+                        <h4>Animazione</h4><small>Velocità</small>
+                        <select id="moveAnimation"><option value="none">None</option><option value="fast">Veloce</option><option value="normal" selected>Normale</option><option value="slow">Lenta</option></select>
+                    </div>
+                </div>
+                <div id="display-panel" class="settings-panel">
+                    <div class="setting-item">
+                        <h4>Tema Scacchiera</h4><small>Colori</small>
+                        <select id="boardTheme"><option value="brown" selected>Marrone</option><option value="green">Verde</option><option value="blue">Blu</option><option value="purple">Viola</option><option value="gray">Grigio</option></select>
+                    </div>
+                    <div class="setting-item">
+                        <h4>Stile Pezzi</h4><small>Seleziona stile</small>
+                        <select id="pieceStyle">
+                            <option value="classic">Classico (attuale)</option>
+                            <option value="pixel">Pixel</option>
+                            <option value="outline">Outline</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <h4>Background</h4><small>Colore</small>
+                        <input type="color" id="backgroundColor" value="#312e2b" />
+                        <small style="margin-top:8px">Oppure carica un'immagine</small>
+                        <input type="file" id="backgroundImage" accept="image/*" />
+                    </div>
+                    <div class="setting-item">
+                        <h4>Colore Evidenzia</h4><small>Ring</small>
+                        <input type="color" id="highlightColor" value="#ffff00" />
+                    </div>
+                    <div class="setting-item">
+                        <h4>Opacità Evidenzia</h4><small><span id="highlightOpacityValue">85%</span></small>
+                        <input type="range" id="highlightOpacity" min="30" max="100" value="85" oninput="document.getElementById('highlightOpacityValue').textContent=this.value+'%'" />
+                    </div>
+                    <!-- Frecce -->
+                    <div class="setting-item">
+                        <h4>Colore Frecce</h4><small>Principale</small>
+                        <input type="color" id="arrowColor" value="#8b4d8b" />
+                    </div>
+                    <div class="setting-item">
+                        <h4>Opacità Frecce</h4><small><span id="arrowOpacityValue">80%</span></small>
+                        <input type="range" id="arrowOpacity" min="20" max="100" value="80" oninput="document.getElementById('arrowOpacityValue').textContent=this.value+'%'" />
+                    </div>
+                    <div class="setting-item">
+                        <h4>Spessore Frecce</h4><small><span id="arrowThicknessValue">12px</span></small>
+                        <input type="range" id="arrowThickness" min="4" max="32" value="12" oninput="document.getElementById('arrowThicknessValue').textContent=this.value+'px'" />
+                    </div>
+                </div>
+                <div id="audio-panel" class="settings-panel">
+                    <div class="setting-item">
+                        <h4>Suoni</h4><small>Abilita</small>
+                        <div id="soundsEnabled" class="toggle active"></div>
+                    </div>
+                    <div class="setting-item">
+                        <h4>Volume</h4><small><span id="masterVolumeValue">70%</span></small>
+                        <input type="range" id="masterVolume" min="0" max="100" value="70" oninput="document.getElementById('masterVolumeValue').textContent=this.value+'%'" />
+                    </div>
+                    <div class="setting-item">
+                        <h4>Mosse</h4><small>Suono mossa</small>
+                        <div id="moveSounds" class="toggle active"></div>
+                    </div>
+                    <div class="setting-item">
+                        <h4>Catture</h4><small>Suono cattura</small>
+                        <div id="captureSounds" class="toggle active"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/settings.js"></script>
+</body>
+</html></content>

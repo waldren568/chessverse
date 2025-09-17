@@ -29,4 +29,9 @@ public class HomeController {
     public String analysisReview() {
         return "analysis_review";
     }
+
+    @GetMapping("/settings")
+    public String settings() {
+        return "settings";
+    }
 }

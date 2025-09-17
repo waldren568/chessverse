@@ -57,6 +57,16 @@ function saveSettings() {
     localStorage.setItem('chessverse_settings', JSON.stringify(userSettings));
 }
 
+// Notify other listeners/pages that settings changed (custom event)
+function notifySettingsChanged() {
+    try {
+        const ev = new CustomEvent('chessverse:settingsChanged', { detail: { settings: userSettings } });
+        window.dispatchEvent(ev);
+    } catch (e) {
+        // ignore
+    }
+}
+
 function applySettings() {
     
     // Applica dimensione scacchiera (evita transform per non disallineare canvas frecce)
@@ -74,6 +84,9 @@ function applySettings() {
     
     // Applica tema scacchiera
     applyBoardTheme(userSettings.boardTheme);
+
+    // Emit change event so other scripts/pages can react
+    notifySettingsChanged();
 
     // Applica stile pezzi
     if (typeof applyPieceStyle === 'function') applyPieceStyle(userSettings.pieceStyle);
@@ -127,7 +140,8 @@ function applyHighlightSettingsDirectly() {
             box-shadow: 0 0 4px 1px rgba(${r}, ${g}, ${b}, ${Math.min(borderOpacity * 0.9,1)});
             background: radial-gradient(circle at center, rgba(${r}, ${g}, ${b}, ${innerA1}) 0%, rgba(${r}, ${g}, ${b}, ${innerA2}) 38%, rgba(${r}, ${g}, ${b}, 0) 60%);
             pointer-events: none;
-            z-index: 14;
+            /* Ensure highlight visuals sit above pieces (pieces z-index ~10) but below overlays/dialogs (z-index >=1000) */
+            z-index: 20;
         }
 
         /* Mosse possibili - cerchio piccolo (vuote) */
@@ -141,7 +155,7 @@ function applyHighlightSettingsDirectly() {
             border-radius: 50%;
             background: rgba(120, 105, 140, 0.55);
             transform: translate(-50%, -50%);
-            z-index: 15;
+            z-index: 21;
             pointer-events: none;
             border: 2px solid rgba(120, 105, 140, 0.75);
         }
@@ -164,7 +178,7 @@ function applyHighlightSettingsDirectly() {
             border: 3px dashed rgba(140, 120, 165, 0.8);
             border-radius: 6px;
             pointer-events: none;
-            z-index: 18;
+            z-index: 21;
         }
 
         /* Premove origine */
@@ -174,7 +188,7 @@ function applyHighlightSettingsDirectly() {
             inset: 0;
             background: rgba(140, 120, 165, 0.15);
             pointer-events: none;
-            z-index: 12;
+            z-index: 19;
         }
     `;
     
@@ -515,6 +529,23 @@ function setupControl(id, event, handler) {
         element.addEventListener(event, handler);
     }
 }
+
+// Listen for storage events from other tabs and reload settings when they change
+window.addEventListener('storage', function(e) {
+    if (!e) return;
+    if (e.key === 'chessverse_settings') {
+        try {
+            const newSettings = e.newValue ? JSON.parse(e.newValue) : null;
+            if (newSettings) {
+                userSettings = {...defaultSettings, ...newSettings};
+                applySettings();
+                loadSettingsUI();
+            }
+        } catch (err) {
+            console.warn('Failed to parse settings from storage event', err);
+        }
+    }
+});
 
 function setupToggle(settingName) {
     const toggle = document.getElementById(settingName);

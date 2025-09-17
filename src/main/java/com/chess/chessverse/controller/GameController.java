@@ -802,4 +802,21 @@ public class GameController {
         return validMoves.get(random.nextInt(validMoves.size()));
     }
 
+    // Endpoint per ottenere la valutazione Stockfish 17 per una FEN
+    @PostMapping("/eval")
+    @ResponseBody
+    public Map<String, Object> getEvaluation(@RequestBody Map<String, String> payload) {
+        String fen = payload.get("fen");
+        Map<String, Object> response = new HashMap<>();
+        if (fen == null || fen.trim().isEmpty()) {
+            response.put("success", false);
+            response.put("error", "FEN mancante");
+            return response;
+        }
+        String eval = stockfishSimpleService.getEvaluation(fen);
+        response.put("success", eval != null);
+        response.put("eval", eval);
+        return response;
+    }
+
 }

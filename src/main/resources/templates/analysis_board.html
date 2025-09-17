@@ -113,14 +113,14 @@
     .square.last-move:not(.selected)::before{content:"";position:absolute;inset:0;background:rgba(247,247,105,0.35);pointer-events:none;z-index:1;}
     .square{position:relative;}
     /* Overlays (promozione / game over) stile index */
-    .dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:500}
+    .dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:10000}
     .dialog{background:#1f1f1f;padding:24px 28px;border:1px solid #3d3d3d;border-radius:12px;width:320px;text-align:center}
     .promotion-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
     .promo-choice{background:#2c2c2c;padding:12px 0;border-radius:8px;font-size:34px;cursor:pointer;transition:background .15s}
     .promo-choice:hover{background:#3a3a3a}
 
     /* === SETTINGS MODAL (stile homepage unificato) === */
-    #settingsOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;z-index=600;overflow:auto}
+    #settingsOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;z-index:10000;overflow:auto}
     #settingsOverlay .settings-modal{background:#262421;margin:60px auto;padding:24px;border-radius:12px;max-width:900px;width:90%;color:#fff;border:1px solid #3d3d3d}
     .settings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
     .settings-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:nowrap;align-items:center}
@@ -350,6 +350,7 @@
             outline: none;
             margin-bottom: 15px;
             cursor: pointer;
+            appearance: none;
             -webkit-appearance: none;
         }
 
@@ -585,21 +586,34 @@
         <div class="header-left">
             <a href="/" class="logo">ChessVerse</a>
             <nav class="nav-links">
-                <a href="/play" style="color: #ffffff; background: #3d3d3d;">Gioca Online</a>
+                <a href="/play">Gioca Online</a>
+                <a href="/bot">Bot Arena</a>
+                <a href="/analysis" class="active">Analizza</a>
             </nav>
         </div>
         <div class="header-right">
-            <button class="settings-btn" onclick="openSettings()" title="Impostazioni">
+            <a href="#" class="settings-btn" title="Impostazioni" onclick="openSettings();return false;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
                 </svg>
-            </button>
+            </a>
             <button class="btn btn-primary">Accedi</button>
         </div>
     </header>
 
     <div class="main-container">
-        <div class="game-area">
+
+        <div class="game-area" style="display: flex; flex-direction: row; align-items: flex-start;">
+            <div id="evalbar-container" style="margin-right: 18px; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start; height: 100%;">
+                <div id="evalbar" style="width: 28px; height: 560px; background: #999; border-radius: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.18); position: relative; overflow: hidden;">
+                        <!-- Top fill: white (solid) -->
+                        <div id="evalbar-top" style="position:absolute; top:0; left:0; right:0; height:50%; background:#fff; border-top-left-radius:0; border-top-right-radius:0; transition: height 0.25s linear; z-index:2;"></div>
+                        <!-- Bottom fill: black (solid) -->
+                        <div id="evalbar-bottom" style="position:absolute; bottom:0; left:0; right:0; height:50%; background:#000; border-bottom-left-radius:0; border-bottom-right-radius:0; transition: height 0.25s linear; z-index:1;"></div>
+                        <!-- Advantage score, will be positioned on the advantaged side -->
+                        <div id="evalbar-score" style="position:absolute; left: 36px; transform: translateX(0); color:#000; font-weight:700; font-size:14px; pointer-events:none; min-width:36px; text-align:center;"></div>
+                    </div>
+            </div>
             <div class="board-container">
                 <div class="chessboard" id="chessboard"></div>
                 <canvas id="annotations-canvas"></canvas>
@@ -622,7 +636,7 @@
 
             <div style="margin-top:18px">
                 <h3 style="margin-bottom:8px">FEN</h3>
-                <textarea id="fenArea" style="width:100%;height:80px;background:#1a1a1a;color:#fff;border:1px solid #3d3d3d;padding:8px;border-radius:6px">""</textarea>
+                <textarea id="fenArea" style="width:100%;height:80px;background:#1a1a1a;color:#fff;border:1px solid #3d3d3d;padding:8px;border-radius:6px">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR</textarea>
                 <div style="display:flex;gap:8px;margin-top:8px">
                     <button id="loadFenBtn" class="btn btn-secondary">Load FEN</button>
                     <button id="exportFenBtn" class="btn btn-secondary">Export</button>
@@ -677,33 +691,49 @@
                     pc.className = 'piece ' + pieceClass(piece);
                     // store canonical piece code so palette / FEN helpers can read it
                     pc.dataset.piece = piece;
-                    // In setup mode allow dragging both white and black pieces freely
-                    if (inSetup){
-                        pc.draggable = true;
-                        pc.addEventListener('dragstart', e => { state._didDrop = false; e.dataTransfer.setData('text/plain', name); state.dragFrom = name; });
+                    // Controllo robusto drag: permesso in setup, oppure in modalità
+                    // 'gioco locale' (selfPlay=false) per i pezzi del colore attivo.
+                    // Ricalcoliamo la permission ad ogni render per mantenere
+                    // consistenza quando lo stato cambia.
+                    try{
+                        const meta = parseFen(state.fen);
+                        const pieceColor = pColor(piece);
+                        // Allow dragging in setup, or when selfPlay is enabled for the active color.
+                        // Previously local play was allowed when selfPlay was false; change that
+                        // so moves are only possible while selfPlay is true (per user's request).
+                        const canDrag = inSetup || (selfPlay && pieceColor === meta.active);
+                        pc.draggable = !!canDrag;
+                        pc.setAttribute('draggable', pc.draggable);
+                        // attach handlers always but guard with current state inside
+                        pc.addEventListener('dragstart', e => {
+                            // re-evaluate permission at event time
+                            const nowMeta = parseFen(state.fen);
+                            const nowColor = pColor(piece);
+                            const nowCanDrag = inSetup || (selfPlay && nowColor === nowMeta.active);
+                            if(!nowCanDrag){ e.preventDefault(); return; }
+                            console.log('[analysis_board] dragstart', name, 'inSetup=', inSetup, 'selfPlay=', selfPlay);
+                            state._didDrop = false; e.dataTransfer.setData('text/plain', name); state.dragFrom = name;
+                        });
                         pc.addEventListener('dragend', () => {
-                            // If a drag ended without a successful drop inside the board, remove the piece (delete off-board)
-                            try{
-                                        if(inSetup && state.dragFrom && !state._didDrop){
-                                            const from = state.dragFrom;
-                                            const sttmp = parseFen(state.fen);
-                                            const [fr,fc] = pos(from);
-                                            const b = sttmp.board.map(r=>r.slice());
-                                            b[fr][fc] = null;
-                                            state.fen = composeFen({ board: b, active: sttmp.active, castling: sttmp.castling, ep: sttmp.ep, half: sttmp.half, full: sttmp.full });
-                                            render();
-                                        }
-                            }catch(e){}
+                            try {
+                                if (inSetup && state.dragFrom && !state._didDrop) {
+                                    const from = state.dragFrom;
+                                    const sttmp = parseFen(state.fen);
+                                    const [fr, fc] = pos(from);
+                                    const b = sttmp.board.map(r => r.slice());
+                                    b[fr][fc] = null;
+                                    state.fen = composeFen({ board: b, active: sttmp.active, castling: sttmp.castling, ep: sttmp.ep, half: sttmp.half, full: sttmp.full });
+                                    render();
+                                }
+                            } catch (e) {}
                             state.dragFrom = null; state._didDrop = false;
                         });
-                    } else {
-                        pc.draggable = false;
-                    }
+                    
                     square.appendChild(pc);
+                    }catch(e){
+                        try{ const elScore = document.getElementById('evalbar-score'); if(elScore) elScore.textContent = 'N/A'; }catch(_){} }
                 }
-
-                square.addEventListener('click', (e)=>{
-                    // Only handle left-clicks here. Right-clicks are handled by
+                square.addEventListener('click', (e) => {
                     // the mousedown/mouseup arrow/annotation handlers and should
                     // not trigger placement/deletion logic (prevents palette 'DEL' from deleting on right-click).
                     if(e.button !== 0) return;
@@ -733,7 +763,8 @@
                             render();
                         }
                     } else {
-                        if (state.dragFrom) tryMove(state.dragFrom, name);
+                        // Only allow drops to perform moves when selfPlay is enabled
+                        if (state.dragFrom && selfPlay) tryMove(state.dragFrom, name);
                     }
                 });
 
@@ -755,7 +786,13 @@
         const sel=document.querySelector(`[data-square="${state.selected}"]`);
         if(sel) sel.classList.add('selected');
     }
-    updateStatus(); applyHighlightSettings(); redrawAnnotations(); renderArrowRemoveMarker(); }
+    updateStatus(); applyHighlightSettings(); redrawAnnotations(); renderArrowRemoveMarker();
+    // --- FEN textarea sync: always update after render ---
+    const fenArea = document.getElementById('fenArea');
+    if(fenArea) fenArea.value = state.fen;
+    // Trigger evaluation update when render completes (debounced)
+    try{ scheduleEvalUpdate(state.fen); }catch(e){}
+    }
     function toggleHighlight(s){ if(highlights.has(s)) highlights.delete(s); else highlights.add(s); updateHighlightDom(); }
     function updateHighlightDom(){ document.querySelectorAll('.square.highlight').forEach(el=>{const n=el.dataset.square; if(!highlights.has(n)) el.classList.remove('highlight');}); highlights.forEach(n=>{const el=document.querySelector(`[data-square="${n}"]`); if(el) el.classList.add('highlight');}); applyHighlightSettings(); }
     function applyHighlightSettings(){
@@ -772,7 +809,13 @@
             stEl.id='highlight-dynamic-style';
             document.head.appendChild(stEl);
         }
-        stEl.textContent=`.square.highlight{position:relative;background:rgba(${r},${g},${b},${op*0.3});}.square.highlight::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:800;background:radial-gradient(circle at center,transparent 0 80%,rgba(${r},${g},${b},${op}) 80% 100%);}`;
+        
+        stEl.textContent=`
+        .square.highlight::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:800;
+                background: radial-gradient(circle at center, transparent 0 74%, rgba(${r},${g},${b},${op}) 60% 100%);
+        }
+        .square.possible-move:not(.occupied)::after{content:"";position:absolute;width:64%;height:34%;background:rgba(0,0,0,0);border-radius:50%;box-shadow:0 0 0 4px rgba(0,0,0,0.0);pointer-events:none;}
+    `;
     }
     // Frecce
     let arrowDragStart=null; let removeArrowDragStart=null; let arrowRemoveStart=null; function onMouseDownSquare(e,name){ if(e.button===2) arrowDragStart=name; else if(e.button===0) removeArrowDragStart=name; }
@@ -780,9 +823,118 @@
     function toggleArrow(from,to){ const idx=arrows.findIndex(a=>a.from===from&&a.to===to); if(idx>=0) arrows.splice(idx,1); else arrows.push({from,to}); }
     function renderArrowRemoveMarker(){ document.querySelectorAll('.square.arrow-remove-start').forEach(el=>el.classList.remove('arrow-remove-start')); if(arrowRemoveStart){ const el=document.querySelector(`[data-square="${arrowRemoveStart}"]`); if(el) el.classList.add('arrow-remove-start'); } }
     function redrawAnnotations(){ const canvas=document.getElementById('annotations-canvas'); if(!canvas) return; const board=document.getElementById('chessboard'); const rect=board.getBoundingClientRect(); canvas.width=rect.width; canvas.height=rect.height; const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height); const squareSize=canvas.width/8; const scaleFactor=squareSize/70; arrows.forEach(a=>drawArrow(ctx,a.from,a.to,'main',canvas,scaleFactor)); }
-    function drawArrow(ctx,from,to,colorKey,canvas,scale){ const [fr,fc]=pos(from); const [tr,tc]=pos(to); const ss=canvas.width/8; const fromX=(fc+0.5)*ss, fromY=(fr+0.5)*ss, toX=(tc+0.5)*ss, toY=(tr+0.5)*ss; let arrowColor=(typeof getSetting==='function'?(getSetting('arrowColor')||'#8b4d8b'):'#8b4d8b'); const opacity=(typeof getSetting==='function'? (getSetting('arrowOpacity')||80)/100:0.8); ctx.globalAlpha=opacity; ctx.strokeStyle=arrowColor; ctx.fillStyle=arrowColor; const thickness=(typeof getSetting==='function'?(getSetting('arrowThickness')||12):12)*scale; ctx.lineWidth=thickness; ctx.lineCap='round'; const angle=Math.atan2(toY-fromY,toX-fromX); const arrowLen=30*scale; const shorten=arrowLen*0.7; const adjX=toX-shorten*Math.cos(angle); const adjY=toY-shorten*Math.sin(angle); ctx.beginPath(); ctx.moveTo(fromX,fromY); ctx.lineTo(adjX,adjY); ctx.stroke(); const arrowAngle=Math.PI/4.5; ctx.beginPath(); ctx.moveTo(toX,toY); ctx.lineTo(toX-arrowLen*Math.cos(angle-arrowAngle), toY-arrowLen*Math.sin(angle-arrowAngle)); ctx.lineTo(toX-arrowLen*Math.cos(angle+arrowAngle), toY-arrowLen*Math.sin(angle+arrowAngle)); ctx.closePath(); ctx.fill(); ctx.globalAlpha=1; }
+    function drawArrow(ctx,from,to,colorKey,canvas,scale){
+        const [fr,fc]=pos(from); const [tr,tc]=pos(to);
+        const ss=canvas.width/8;
+        const fromX=(fc+0.5)*ss, fromY=(fr+0.5)*ss, toX=(tc+0.5)*ss, toY=(tr+0.5)*ss;
+        let arrowColor=(typeof getSetting==='function'?(getSetting('arrowColor')||'#8b4d8b'):'#8b4d8b');
+        const opacity=(typeof getSetting==='function'? (getSetting('arrowOpacity')||80)/100:0.8);
+        ctx.globalAlpha=opacity;
+        ctx.strokeStyle=arrowColor;
+        ctx.fillStyle=arrowColor;
+        const baseThickness=(typeof getSetting==='function'?(getSetting('arrowThickness')||12):12);
+        const thickness=baseThickness*scale;
+        ctx.lineWidth=thickness;
+        ctx.lineCap='round';
+        // --- Knight move detection ---
+        const dr=Math.abs(fr-tr), dc=Math.abs(fc-tc);
+        const isKnight=(dr===2&&dc===1)||(dr===1&&dc===2);
+        // --- Arrowhead size proportional to thickness ---
+        const arrowLength=(24 + thickness*1.2);
+        const baseWidth=arrowLength * 1.2;
+        const arrowAngle=Math.PI/7;
+        if(isKnight){
+            let midX, midY;
+            if(dr===2&&dc===1){ midX=fromX; midY=toY; } else { midX=toX; midY=fromY; }
+            const dx=toX-midX, dy=toY-midY;
+            const len=Math.sqrt(dx*dx+dy*dy);
+            const shorten=arrowLength*0.6;
+            const tipX=toX-shorten*(dx/len);
+            const tipY=toY-shorten*(dy/len);
+            ctx.beginPath();
+            ctx.moveTo(fromX,fromY);
+            ctx.lineTo(midX,midY);
+            ctx.lineTo(tipX,tipY);
+            ctx.stroke();
+            const angleKnight=Math.atan2(toY-midY,toX-midX);
+            const base1X=tipX + baseWidth/2 * Math.cos(angleKnight + Math.PI/2);
+            const base1Y=tipY + baseWidth/2 * Math.sin(angleKnight + Math.PI/2);
+            const base2X=tipX + baseWidth/2 * Math.cos(angleKnight - Math.PI/2);
+            const base2Y=tipY + baseWidth/2 * Math.sin(angleKnight - Math.PI/2);
+            const headX=tipX + arrowLength * Math.cos(angleKnight);
+            const headY=tipY + arrowLength * Math.sin(angleKnight);
+            ctx.beginPath();
+            ctx.moveTo(headX, headY);
+            ctx.lineTo(base1X, base1Y);
+            ctx.lineTo(base2X, base2Y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha=1;
+            return;
+        }
+        // --- Normal arrow ---
+        const angleNorm=Math.atan2(toY-fromY,toX-fromX);
+        const shorten=arrowLength * 0.6;
+        const adjX=toX-shorten*Math.cos(angleNorm);
+        const adjY=toY-shorten*Math.sin(angleNorm);
+        ctx.beginPath();
+        ctx.moveTo(fromX,fromY);
+        ctx.lineTo(adjX,adjY);
+        ctx.stroke();
+        const tipX=adjX;
+        const tipY=adjY;
+        const base1X=tipX + baseWidth/2 * Math.cos(angleNorm + Math.PI/2);
+        const base1Y=tipY + baseWidth/2 * Math.sin(angleNorm + Math.PI/2);
+        const base2X=tipX + baseWidth/2 * Math.cos(angleNorm - Math.PI/2);
+        const base2Y=tipY + baseWidth/2 * Math.sin(angleNorm - Math.PI/2);
+        const headX=tipX + arrowLength * Math.cos(angleNorm);
+        const headY=tipY + arrowLength * Math.sin(angleNorm);
+        ctx.beginPath();
+        ctx.moveTo(headX, headY);
+        ctx.lineTo(base1X, base1Y);
+        ctx.lineTo(base2X, base2Y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha=1;
+    }
     document.addEventListener('contextmenu',e=>{ if(e.target.closest && e.target.closest('#chessboard')) e.preventDefault(); }); window.addEventListener('resize',()=>redrawAnnotations());
-    function onSquare(sqName){ if(state.gameOver) return; if(state.selected){ if(state.selected===sqName){ state.selected=null; render(); return;} if(!tryMove(state.selected,sqName)){ const st=parseFen(state.fen); const [r,c]=pos(sqName); const pc=st.board[r][c]; if(pc && pColor(pc)===parseFen(state.fen).active){ state.selected=sqName; render(); } } } else { const st=parseFen(state.fen); const [r,c]=pos(sqName); const pc=st.board[r][c]; if(pc && pColor(pc)===st.active){ state.selected=sqName; render(); } } }
+    function onSquare(sqName){
+        if(state.gameOver) return;
+        // If not in setup and selfPlay is disabled, only allow selection (no moves)
+        if(!inSetup && !selfPlay){
+            try{
+                if(state.selected){
+                    if(state.selected===sqName){ state.selected=null; render(); return; }
+                    // Do not attempt to move when selfPlay is disabled; allow selecting opposing pieces of active color
+                    const st=parseFen(state.fen);
+                    const [r,c]=pos(sqName);
+                    const pc=st.board[r][c];
+                    if(pc && pColor(pc)===st.active){ state.selected=sqName; render(); }
+                } else {
+                    const st=parseFen(state.fen);
+                    const [r,c]=pos(sqName);
+                    const pc=st.board[r][c];
+                    if(pc && pColor(pc)===st.active){ state.selected=sqName; render(); }
+                }
+            }catch(e){ console.error('[analysis_board] onSquare selection-only error', e); }
+            return;
+        }
+        // Normal behavior (either in setup, or selfPlay is enabled)
+        if(state.selected){
+            if(state.selected===sqName){ state.selected=null; render(); return; }
+            if(!tryMove(state.selected,sqName)){
+                const st=parseFen(state.fen);
+                const [r,c]=pos(sqName);
+                const pc=st.board[r][c];
+                if(pc && pColor(pc)===parseFen(state.fen).active){ state.selected=sqName; render(); }
+            }
+        } else {
+            const st=parseFen(state.fen);
+            const [r,c]=pos(sqName);
+            const pc=st.board[r][c];
+            if(pc && pColor(pc)===st.active){ state.selected=sqName; render(); }
+        }
+    }
     function tryMove(from,to){ const legal=generateLegalMoves(state.fen); const mv=legal.find(m=>m.from===from&&m.to===to); if(!mv){ flashInvalid(to); return false;} if(mv.promotion){ showPromotion(from,to,mv); return true;} applyMove(mv); return true; }
     function flashInvalid(sqName){ const el=document.querySelector(`[data-square="${sqName}"]`); if(!el) return; el.classList.add('invalid'); setTimeout(()=>el.classList.remove('invalid'),350); }
     function applyMove(m){
@@ -798,7 +950,10 @@
         state.lastFrom=m.from; state.lastTo=m.to; state.fen=composeFen(ns); state.selected=null; state.cache.clear();
         // play move/capture sound (if audio helpers are available)
         try{ const [tr,tc]=pos(m.to); const captured = !!st.board[tr][tc]; if(typeof playMoveSound==='function') playMoveSound(captured ? 'capture' : 'move'); }catch(e){}
-        checkEnd(); render();
+    checkEnd(); render();
+    // FEN textarea sync: ensure update after move
+    const fenArea = document.getElementById('fenArea');
+    if(fenArea) fenArea.value = state.fen;
         return true;
     }
     function checkEnd(){ const moves=generateLegalMoves(state.fen); const st=parseFen(state.fen); const color=st.active; let king=null; for(let r=0;r<8;r++) for(let c=0;c<8;c++){ const p=st.board[r][c]; if(p&&p.toLowerCase()==='k'&&pColor(p)===color) king=sq(r,c);} const inCheck=isAttacked(st,king,color); if(moves.length===0){ state.gameOver=true; if(inCheck){ state.winner=other(color); showGameOver(`${state.winner==='white'?'Bianco':'Nero'} vince!`,'Scacco Matto'); } else { showGameOver('Patta','Stallo'); } } }
@@ -867,6 +1022,32 @@
     // --- Analysis page additions: setup, palette, FEN controls ---
     let inSetup = false;
     let selfPlay = false;
+    function setSetupMode(on){
+        inSetup = !!on;
+        if(inSetup){
+            selfPlay = false;
+        }
+        const setupBtn = document.getElementById('setupBtn');
+        const selfBtn = document.getElementById('selfPlayBtn');
+        const clearBtn = document.getElementById('clearSetupBtn');
+        if(setupBtn) setupBtn.textContent = inSetup ? 'Setup: On' : 'Setup';
+        if(selfBtn) selfBtn.textContent = 'Self-play: ' + (selfPlay ? 'On' : 'Off');
+        if(clearBtn) clearBtn.style.display = inSetup ? 'inline-block' : 'none';
+        try{ render(); }catch(e){}
+    }
+    function setSelfPlayMode(on){
+        selfPlay = !!on;
+        if(selfPlay){
+            inSetup = false;
+        }
+        const setupBtn = document.getElementById('setupBtn');
+        const selfBtn = document.getElementById('selfPlayBtn');
+        const clearBtn = document.getElementById('clearSetupBtn');
+        if(setupBtn) setupBtn.textContent = inSetup ? 'Setup: On' : 'Setup';
+        if(selfBtn) selfBtn.textContent = 'Self-play: ' + (selfPlay ? 'On' : 'Off');
+        if(clearBtn) clearBtn.style.display = inSetup ? 'inline-block' : 'none';
+        try{ render(); }catch(e){}
+    }
     const pieceOrder = ['K','Q','R','B','N','P','k','q','r','b','n','p'];
     let palette=null, boardEl=null, currentFen='';
     // Note: do not attempt to preserve/call an earlier `onSquare` declaration here.
@@ -917,6 +1098,119 @@
             state.fen = composeFen({ board: b, active: meta.active, castling: meta.castling, ep: meta.ep, half: meta.half, full: meta.full });
         }catch(e){ state.fen = currentFen + ' w - - 0 1'; }
         const fa=document.getElementById('fenArea'); if(fa) fa.value=currentFen;
+    }
+
+    // --- Eval bar integration (live Stockfish via /api/eval) ---
+    // Elements: #evalbar-top / #evalbar-bottom (heights) and #evalbar-score (text)
+    let _evalDebounceTimer = null;
+    let _lastEvalFen = null;
+    let _lastEngineUnavailableAt = 0;
+    const ENGINE_COOLDOWN_MS = 5000; // if engine unavailable, wait this long before retrying
+    function scheduleEvalUpdate(fen){
+        // If fen didn't change, skip
+        if(!fen) return;
+        if(fen === _lastEvalFen) return;
+        _lastEvalFen = fen;
+        if(_evalDebounceTimer) clearTimeout(_evalDebounceTimer);
+        // debounce ~700ms after last render/move
+        _evalDebounceTimer = setTimeout(()=>{ requestEval(fen); _evalDebounceTimer = null; }, 700);
+    }
+
+    function parseEvalString(evalStr){
+        // Returns object: { type: 'cp'|'mate'|'na', value: number }
+        if(!evalStr) return { type: 'na', value: 0 };
+        evalStr = String(evalStr).trim();
+        if(evalStr.startsWith('#')){
+            // mate: like #3 or #-3
+            const v = parseInt(evalStr.slice(1), 10);
+            if(Number.isNaN(v)) return { type: 'na', value: 0 };
+            return { type: 'mate', value: v };
+        }
+        // centipawn-ish: might be "+1.23" or "+123" (assume pawn units if contains '.')
+        let num = parseFloat(evalStr.replace('+',''));
+        if(Number.isNaN(num)) return { type: 'na', value: 0 };
+        // If the string seems like centipawns (large int), normalize to pawns
+        if(Math.abs(num) > 20) num = num / 100.0; // convert cp to pawns
+        return { type: 'cp', value: num };
+    }
+
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+    function evalToPercent(evalObj){
+        // Map evaluation (in pawn units) to [0,100] percent for the fill height.
+        // We clamp at +/-10 pawns as extremes. Use a smooth sigmoid-like mapping.
+        if(!evalObj || evalObj.type === 'na') return 50;
+        if(evalObj.type === 'mate'){
+            // If mate in favor, push extreme to full white; if negative mate, full black
+            return evalObj.value > 0 ? 98 : 2;
+        }
+        const pawns = evalObj.value;
+        const max = 10.0; // 10 pawns = 100%
+        // Use tanh for smoothness
+        const t = Math.tanh(pawns / max);
+        // t in (-1,1). Convert to percent where 50 is center
+        return Math.round((t + 1) * 50);
+    }
+
+    async function requestEval(fen){
+        try{
+            // Backoff if engine recently unavailable
+            if(Date.now() - _lastEngineUnavailableAt < ENGINE_COOLDOWN_MS){
+                const elScore = document.getElementById('evalbar-score');
+                if(elScore) elScore.textContent = 'Stockfish N/A';
+                return;
+            }
+            const elTop = document.getElementById('evalbar-top');
+            const elBottom = document.getElementById('evalbar-bottom');
+            const elScore = document.getElementById('evalbar-score');
+            if(!elTop || !elBottom || !elScore) return;
+            elScore.textContent = '…';
+            // call backend
+            const resp = await fetch('/api/eval', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fen }) });
+            if(!resp.ok){ elScore.textContent = 'N/A'; return; }
+            const data = await resp.json();
+            const evalStr = data && data.eval ? data.eval : null;
+            if(!evalStr){
+                // mark engine unavailable and show clear message
+                _lastEngineUnavailableAt = Date.now();
+                elTop.style.height = '50%'; elBottom.style.height = '50%';
+                elScore.textContent = 'Stockfish N/A';
+                elScore.style.color = '#000';
+                elScore.style.top = '50%';
+                return;
+            }
+            const parsed = parseEvalString(evalStr);
+            const pct = evalToPercent(parsed); // 0..100, 50=balanced, higher => white advantage
+
+            // Set solid fill heights (square corners, no gradients)
+            elTop.style.height = pct + '%';
+            elBottom.style.height = (100 - pct) + '%';
+
+            // Position and color the score on the advantaged side
+            let text = 'N/A';
+            if(parsed.type === 'na') text = 'N/A';
+            else if(parsed.type === 'mate') text = '#' + parsed.value;
+            else text = (parsed.value > 0 ? '+' : '') + parsed.value.toFixed(2);
+
+            elScore.textContent = text;
+
+            // Vertical placement: center of the advantaged fill
+            let topPercent;
+            if(pct >= 50){
+                // White advantage: center of top fill
+                topPercent = pct / 2.0;
+                elScore.style.color = '#000'; // dark text on white
+            } else {
+                // Black advantage: center of bottom fill
+                topPercent = 100 - (100 - pct) / 2.0;
+                elScore.style.color = '#fff'; // light text on black
+            }
+            elScore.style.top = topPercent + '%';
+            elScore.style.left = '34px';
+            elScore.style.transform = 'translateY(-50%)';
+
+        }catch(e){
+            try{ const elScore = document.getElementById('evalbar-score'); if(elScore) elScore.textContent = 'N/A'; }catch(_){} }
     }
 
 
@@ -1016,16 +1310,17 @@
         const copyFenBtn=document.getElementById('copyFenBtn');
 
         if(setupBtn) setupBtn.addEventListener('click', ()=>{
-            if(selfPlay){ selfPlay=false; selfBtn.textContent='Self-play: Off'; }
-            inSetup = !inSetup; setupBtn.textContent = inSetup? 'Setup: On' : 'Setup'; clearBtn.style.display = inSetup? 'inline-block':'none'; if(!inSetup){ heldPiece=null; const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML=''; }
-            // Re-render immediately so piece elements gain/lose draggable attribute
-            try{ render(); }catch(e){}
+            // Toggle setup; ensure selfPlay disabled when entering setup
+            setSetupMode(!inSetup);
+            if(!inSetup){ heldPiece=null; const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML=''; }
+            console.log('[analysis_board] setup toggled ->', inSetup);
         });
 
         if(selfBtn) selfBtn.addEventListener('click', ()=>{
-            if(inSetup){ inSetup=false; setupBtn.textContent='Setup'; clearBtn.style.display='none'; heldPiece=null; const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML=''; }
-            selfPlay = !selfPlay; selfBtn.textContent = 'Self-play: '+(selfPlay? 'On' : 'Off');
-            try{ render(); }catch(e){}
+            // Toggle self-play; ensure setup disabled when entering self-play
+            setSelfPlayMode(!selfPlay);
+            if(inSetup){ heldPiece=null; const hb=document.getElementById('heldPieceBox'); if(hb) hb.innerHTML=''; }
+            console.log('[analysis_board] selfPlay toggled ->', selfPlay);
         });
 
         if(resetBtn) resetBtn.addEventListener('click', ()=>{ resetGame(); updateFenFromBoard(); });

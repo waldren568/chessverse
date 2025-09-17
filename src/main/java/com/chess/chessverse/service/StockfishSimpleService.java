@@ -1,3 +1,4 @@
+
 package com.chess.chessverse.service;
 
 import org.springframework.stereotype.Service;
@@ -6,6 +7,74 @@ import java.util.concurrent.*;
 
 @Service("stockfishSimple")
 public class StockfishSimpleService {
+
+    /**
+     * Ottiene la valutazione (score) per una posizione FEN usando Stockfish 17 (max skill, max tempo ragionevole)
+     * Restituisce una stringa tipo "+1.23" (centipawn) o "#-3" (mate in 3 per il nero)
+     * Esegue solo la valutazione, senza handshake UCI (che avviene solo in initialize)
+     */
+    public String getEvaluation(String fen) {
+        if (!isInitialized || stockfishProcess == null || !stockfishProcess.isAlive()) {
+            return null;
+        }
+        try {
+            processWriter.println("setoption name Skill Level value 20");
+            processWriter.println("position fen " + fen);
+            int moveTime = isOpeningPosition(fen) ? 2000 : 10000;
+            processWriter.println("go movetime " + moveTime);
+            processWriter.flush();
+
+            final BufferedReader reader = processReader;
+            final String[] lastScore = {null};
+            final boolean[] gotBestmove = {false};
+            final StringBuilder debugLog = new StringBuilder();
+
+            Thread t = new Thread(() -> {
+                try {
+                    String l;
+                    while ((l = reader.readLine()) != null) {
+                        debugLog.append(l).append("\n");
+                        if (l.contains("score ")) {
+                            int idx = l.indexOf("score ");
+                            String sub = l.substring(idx + 6);
+                            if (sub.startsWith("cp ")) {
+                                String[] parts = sub.split(" ");
+                                if (parts.length >= 2) {
+                                    try {
+                                        int cp = Integer.parseInt(parts[1]);
+                                        double pawns = cp / 100.0;
+                                        lastScore[0] = String.format("%+.2f", pawns);
+                                    } catch (Exception ignore) {}
+                                }
+                            } else if (sub.startsWith("mate ")) {
+                                String[] parts = sub.split(" ");
+                                if (parts.length >= 2) {
+                                    try {
+                                        int mate = Integer.parseInt(parts[1]);
+                                        lastScore[0] = (mate > 0 ? "#" : "#-") + Math.abs(mate);
+                                    } catch (Exception ignore) {}
+                                }
+                            }
+                        }
+                        if (l.startsWith("bestmove ")) {
+                            gotBestmove[0] = true;
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    debugLog.append("[EXC] ").append(e.getMessage()).append("\n");
+                }
+            });
+            t.start();
+            t.join(moveTime + 3000); // Attendi massimo tempo + margine
+            if (t.isAlive()) t.interrupt();
+            System.out.println("[StockfishSimpleService] Eval debug log:\n" + debugLog);
+            return lastScore[0];
+        } catch (Exception e) {
+            System.out.println("❌ Errore durante valutazione posizione: " + e.getMessage());
+            return null;
+        }
+    }
     
     private Process stockfishProcess;
     private PrintWriter processWriter;
@@ -18,7 +87,7 @@ public class StockfishSimpleService {
         String stockfishPath = System.getProperty("user.dir") + File.separator + "stockfish.exe";
         System.out.println("📁 Percorso Stockfish: " + stockfishPath);
         
-        try {
+    try {
             // Test se il file esiste
             File stockfishFile = new File(stockfishPath);
             if (!stockfishFile.exists()) {
@@ -32,123 +101,64 @@ public class StockfishSimpleService {
             ProcessBuilder pb = new ProcessBuilder(stockfishPath);
             pb.directory(new File(System.getProperty("user.dir")));
             stockfishProcess = pb.start();
-            
+
             // Aspetta che il processo si avvii
             Thread.sleep(200);
-            
+
             if (!stockfishProcess.isAlive()) {
                 System.out.println("❌ Il processo Stockfish è terminato");
                 return;
             }
-            
+
             System.out.println("✅ Processo Stockfish avviato con PID: " + stockfishProcess.pid());
-            
+
             // Configura i stream
             processWriter = new PrintWriter(stockfishProcess.getOutputStream(), true);
             processReader = new BufferedReader(new InputStreamReader(stockfishProcess.getInputStream()));
-            
-            // TEST SUPER AGGRESSIVO STOCKFISH
-            System.out.println("🔬 DIAGNOSI COMPLETA STOCKFISH:");
-            
-            // Test 0: Verifica processo
-            System.out.println("🔍 Processo vivo: " + stockfishProcess.isAlive());
-            System.out.println("🔍 PID: " + stockfishProcess.pid());
-            
-            // Test 1: Prima verifica bytes disponibili
-            Thread.sleep(100);
-            int available = stockfishProcess.getInputStream().available();
-            System.out.println("📊 Bytes immediatamente disponibili: " + available);
-            
-            // Test 2: Invio comando semplice
-            System.out.println("📤 Invio 'isready'...");
+
+            // Handshake UCI SOLO UNA VOLTA
+            processWriter.println("uci");
+            processWriter.flush();
+            String line;
+            boolean gotUciOk = false;
+            long start = System.currentTimeMillis();
+            while (System.currentTimeMillis() - start < 5000) {
+                if (processReader.ready()) {
+                    line = processReader.readLine();
+                    System.out.println("[StockfishSimpleService][UCI] " + line);
+                    if (line != null && line.trim().equals("uciok")) {
+                        gotUciOk = true;
+                        break;
+                    }
+                }
+            }
+            if (!gotUciOk) {
+                System.out.println("[StockfishSimpleService] UCI handshake fallito");
+                return;
+            }
+
+            // Invia 'isready' e attendi 'readyok'
             processWriter.println("isready");
             processWriter.flush();
-            
-            Thread.sleep(200);
-            available = stockfishProcess.getInputStream().available();
-            System.out.println("📊 Bytes dopo isready: " + available);
-            
-            // Test 3: UCI con debug intensivo
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            Future<Boolean> future = executor.submit(() -> {
-                try {
-                    System.out.println("📤 Invio comando UCI...");
-                    processWriter.println("uci");
-                    processWriter.flush();
-                    
-                    System.out.println("🔄 Inizio lettura risposta...");
-                    String line;
-                    int lineCount = 0;
-                    long startTime = System.currentTimeMillis();
-                    
-                    while ((line = processReader.readLine()) != null) {
-                        lineCount++;
-                        long elapsed = System.currentTimeMillis() - startTime;
-                        System.out.println("📋 [" + elapsed + "ms] Linea " + lineCount + ": [" + line + "]");
-                        
-                        if (line.trim().equals("uciok")) {
-                            System.out.println("✅✅✅ TROVATO UCIOK! ✅✅✅");
-                            return true;
-                        }
-                        
-                        // Sicurezza: max 50 linee
-                        if (lineCount > 50) {
-                            System.out.println("⚠️ Limite linee raggiunto");
-                            break;
-                        }
+            boolean gotReadyOk = false;
+            start = System.currentTimeMillis();
+            while (System.currentTimeMillis() - start < 5000) {
+                if (processReader.ready()) {
+                    line = processReader.readLine();
+                    System.out.println("[StockfishSimpleService][READY] " + line);
+                    if (line != null && line.trim().equals("readyok")) {
+                        gotReadyOk = true;
+                        break;
                     }
-                    
-                    System.out.println("❌ Fine stream senza uciok (linee lette: " + lineCount + ")");
-                    return false;
-                } catch (Exception e) {
-                    System.out.println("💥 ERRORE CRITICO: " + e.getMessage());
-                    e.printStackTrace();
-                    return false;
                 }
-            });
-            
-            try {
-                // Aspetta massimo 5 secondi per uciok
-                boolean success = future.get(5, TimeUnit.SECONDS);
-                
-                if (success) {
-                    // Configura Stockfish per livello principiante
-                    processWriter.println("setoption name Skill Level value 0");
-                    processWriter.println("setoption name UCI_LimitStrength value true");
-                    processWriter.println("setoption name UCI_Elo value 800");
-                    processWriter.println("isready");
-                    
-                    // Aspetta readyok
-                    Future<Boolean> readyFuture = executor.submit(() -> {
-                        try {
-                            String line;
-                            while ((line = processReader.readLine()) != null) {
-                                System.out.println("📋 << " + line);
-                                if (line.trim().equals("readyok")) {
-                                    return true;
-                                }
-                            }
-                            return false;
-                        } catch (Exception e) {
-                            return false;
-                        }
-                    });
-                    
-                    readyFuture.get(2, TimeUnit.SECONDS);
-                    
-                    isInitialized = true;
-                    System.out.println("✅ Stockfish inizializzato correttamente!");
-                } else {
-                    System.out.println("❌ Non ricevuto uciok da Stockfish");
-                }
-                
-            } catch (TimeoutException e) {
-                System.out.println("❌ Timeout durante inizializzazione Stockfish");
-                future.cancel(true);
             }
-            
-            executor.shutdown();
-            
+            if (!gotReadyOk) {
+                System.out.println("[StockfishSimpleService] isready handshake fallito");
+                return;
+            }
+
+            isInitialized = true;
+            System.out.println("✅ Stockfish inizializzato correttamente!");
         } catch (Exception e) {
             System.out.println("❌ Errore inizializzazione Stockfish: " + e.getMessage());
             e.printStackTrace();
